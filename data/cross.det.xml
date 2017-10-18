@@ -1,0 +1,6 @@
+<additional>
+	<laneAreaDetector id="0" lane="4i_0" pos="250" endPos="490" friendlyPos="x" freq="100" file="cross.out"/>
+	<laneAreaDetector id="1" lane="2i_0" pos="250" endPos="490" friendlyPos="x" freq="100" file="cross.out"/>
+	<laneAreaDetector id="2" lane="3i_0" pos="250" endPos="490" friendlyPos="x" freq="100" file="cross.out"/>
+	<laneAreaDetector id="3" lane="1i_0" pos="250" endPos="490" friendlyPos="x" freq="100" file="cross.out"/>
+</additional>
