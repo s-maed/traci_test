@@ -13,6 +13,7 @@ class QLearning:
         self.previous_digitized_state = None
         self.max_num_car_stopped = max_num_car_stopped
         self.next_action_idx = 0
+        self.rewards = []
 
     def digitize_state(self, state_dict):
         light_phase = state_dict['light_phase']

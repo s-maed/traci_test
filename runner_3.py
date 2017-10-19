@@ -24,6 +24,7 @@ import subprocess
 import random
 
 import numpy as np
+import matplotlib.pyplot as plt
 from q_learning import QLearning
 
 
@@ -43,7 +44,7 @@ import traci
 
 def generate_routefile():
     random.seed(42)  # make tests reproducible
-    N = 2000000  # number of time steps
+    N = 200000  # number of time steps
     # demand per second from different directions
     pWE = 1. / 18
     pEW = 1. / 15
@@ -143,6 +144,7 @@ def run():
 
             # reward
             reward = - np.sum([x**1.5 for x in [count_0, count_1, count_2, count_3]])
+            q.rewards.append(reward)
 
             # 各青赤フェーズが終了したタイミングで、以前の状況に対してとったアクションに対するリワードを計算するため、このタイミングで、前回のstateとactionに対するリワードを計算する？
 
@@ -158,19 +160,10 @@ def run():
             q.is_calculate_next_action = False
             print("set phase {} for {} seconds".format(light_phase, q.action[q.next_action_idx]))
 
-
-
-        """ tutorial
-        if traci.trafficlight.getPhase("0") == 2:
-            # we are not already switching
-            if traci.inductionloop.getLastStepVehicleNumber("0") > 0:
-                # there is a vehicle from the north, switch
-                traci.trafficlight.setPhase("0", 3)
-            else:
-                # otherwise try to keep green for EW
-                traci.trafficlight.setPhase("0", 2)
-        """
         step += 1
+        if step % 10000 == 0:
+            plot_graph(q.rewards)
+
     traci.close()
     sys.stdout.flush()
 
@@ -182,6 +175,11 @@ def get_options():
     options, args = optParser.parse_args()
     return options
 
+
+def plot_graph(rewards):
+    plt.figure()
+    plt.plot(rewards)
+    plt.show()
 
 # this is the main entry point of this script
 if __name__ == "__main__":
