@@ -33,7 +33,7 @@ def generate_routefile():
     N = 1000000  # number of time steps
     # demand per second from different directions
     pWE = 1. / 12
-    pEW = 1. / 9
+    pEW = 1. / 7
     pNS = 1. / 30
     pSN = 1. / 40
     with open("data/cross.rou.xml", "w") as routes:
@@ -141,7 +141,7 @@ def run():
         lane_length = traci.lanearea.getLength("0")
         ns_occupancy = max(traci.lanearea.getJamLengthMeters("0")/lane_length, traci.lanearea.getJamLengthMeters("2")/lane_length)
         ew_occupancy = max(traci.lanearea.getJamLengthMeters("1")/lane_length, traci.lanearea.getJamLengthMeters("3")/lane_length)
-        elapsed_time = step - q.prev_t
+        elapsed_time = min(step - q.prev_t, max_elapsed_time-1)
         observation = q.digitize_state(light_phase, ns_occupancy, ew_occupancy, elapsed_time)
 
         # reward
