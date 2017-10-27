@@ -1,18 +1,4 @@
 #!/usr/bin/env python
-# Eclipse SUMO, Simulation of Urban MObility; see https://eclipse.org/sumo
-# Copyright (C) 2009-2017 German Aerospace Center (DLR) and others.
-# This program and the accompanying materials
-# are made available under the terms of the Eclipse Public License v2.0
-# which accompanies this distribution, and is available at
-# http://www.eclipse.org/legal/epl-v20.html
-
-# @file    runner.py
-# @author  Lena Kalleske
-# @author  Daniel Krajzewicz
-# @author  Michael Behrisch
-# @author  Jakob Erdmann
-# @date    2009-03-26
-# @version $Id: runner.py 26301 2017-10-02 20:48:38Z behrisch $
 
 from __future__ import absolute_import
 from __future__ import print_function
@@ -46,8 +32,8 @@ def generate_routefile():
     random.seed(42)  # make tests reproducible
     N = 1000000  # number of time steps
     # demand per second from different directions
-    pWE = 1. / 15
-    pEW = 1. / 8
+    pWE = 1. / 12
+    pEW = 1. / 9
     pNS = 1. / 30
     pSN = 1. / 40
     with open("data/cross.rou.xml", "w") as routes:
@@ -98,19 +84,21 @@ def run():
     """execute the TraCI control loop"""
     step = 0
     
-    # initialize QLearning
-    phases = [0, 2]
-    num_lane_occupancy_states = 10
-    num_lanes = 2
-    min_elapsed_time = 10
-    max_elapsed_time = 40
-    actions = [0, 1]
+    # Initialize QLearning instance
+    phases = [0, 2]                # 信号のフェーズのうち、0と2のどちらかをとる
+    num_lane_occupancy_states = 10 # 各レーンの混雑具合のレベル数
+    num_lanes = 2                  # レーンの数（南北で一つ、東西で一つ）
+    min_elapsed_time = 10          # 信号の最小点灯時間
+    max_elapsed_time = 40          # 信号の最大点灯時間
+    actions = [0, 1]               # 取りうるアクションのインデックス
+
     q = QLearning(phases, num_lane_occupancy_states, num_lanes, min_elapsed_time, max_elapsed_time, actions)
 
 
     while traci.simulation.getMinExpectedNumber() > 0:
         traci.simulationStep()
 
+        # 10000ステップごとにrewardをプロットする
         step += 1
         if step % 10000 == 0:
             plot_graph(q.rewards)
@@ -120,45 +108,53 @@ def run():
 
         # もし黄色信号のフェーズだったら次のステップに進む
         if light_phase == 1 or light_phase == 3:
+            # 直前の青信号の情報を記憶する
             if q.is_set_max_duration:
-                q.prev_t = step - 1
+                q.prev_t = step + 7 # 黄色信号の点灯時間分+1ステップを足しておく
                 q.is_set_max_duration = False
-                ns_length = max(traci.lanearea.getJamLengthMeters("0"), traci.lanearea.getJamLengthMeters("2"))
-                ew_length = max(traci.lanearea.getJamLengthMeters("1"), traci.lanearea.getJamLengthMeters("3"))
+                ns_length = traci.lanearea.getJamLengthMeters("0") + traci.lanearea.getJamLengthMeters("2")
+                ew_length = traci.lanearea.getJamLengthMeters("1") + traci.lanearea.getJamLengthMeters("3")
                 q.max_length_prev_t = ns_length + ew_length
 
+                # 信号が1サイクル回ったら、そのサイクルのリワードの合計を記憶
                 if light_phase == 3:
                     q.rewards.append(q.cycle_rewards)
                     q.cycle_rewards = 0
+            # DEBUG
+            print("Step:", step)
+            print("Yellow light phase")
+            print()
             continue
 
         # もし青フェーズになったばかりだったら、点灯時間の最大値をセットする
+        # ミリ秒単位でセットするので、40 * 1000
         if not q.is_set_max_duration:
             traci.trafficlight.setPhaseDuration("0", q.max_elapsed_time*1000)
             q.is_set_max_duration = True
 
-        # もし青フェーズの最低点灯時間に達していなかったら、次のステップに進む
-        if (step - q.prev_t) < (q.min_elapsed_time + 6):
+        # もし青フェーズの最低点灯時間に達していなかったら、そのまま次のステップに進む
+        if (step - q.prev_t) < q.min_elapsed_time:
             continue
 
         # observation（現在のstate）
+        # 南北と東西のそれぞれのレーンで一番混んでいる状況を取得
         lane_length = traci.lanearea.getLength("0")
         ns_occupancy = max(traci.lanearea.getJamLengthMeters("0")/lane_length, traci.lanearea.getJamLengthMeters("2")/lane_length)
         ew_occupancy = max(traci.lanearea.getJamLengthMeters("1")/lane_length, traci.lanearea.getJamLengthMeters("3")/lane_length)
-        print(ew_occupancy)
-        print(traci.lanearea.getJamLengthMeters("1"))
-        print(lane_length)
-        elapsed_time = min(step - q.prev_t - q.min_elapsed_time, 29)
+        elapsed_time = step - q.prev_t
         observation = q.digitize_state(light_phase, ns_occupancy, ew_occupancy, elapsed_time)
 
         # reward
-        ns_length = max(traci.lanearea.getJamLengthMeters("0"), traci.lanearea.getJamLengthMeters("2"))
-        ew_length = max(traci.lanearea.getJamLengthMeters("1"), traci.lanearea.getJamLengthMeters("3"))
+        # 各レーンのキューの長さをもとに計算
+        ns_length = traci.lanearea.getJamLengthMeters("0") + traci.lanearea.getJamLengthMeters("2")
+        ew_length = traci.lanearea.getJamLengthMeters("1") + traci.lanearea.getJamLengthMeters("3")
         reward = q.calculate_reward(ns_length, ew_length)
         q.cycle_rewards += reward
-        print("observation:", observation)
-        print("elapsed time:", elapsed_time)
-        print("step:", step)
+
+        # DEBUG
+        print("Step:", step)
+        print("Current Phase:", light_phase)
+        print("Elapsed Time:", elapsed_time)
         print("reward:", reward)
         print()
 
@@ -167,11 +163,12 @@ def run():
 
         # 1秒後のアクションを判断する
         action = q.get_action(observation)
+
+        # 現状のアクションと状態を保存
         q.action = action
         q.state = observation
 
-
-        # もし次にとるべきフェーズが次のフェーズと異なるなら、現在のフェーズの残り時間を1秒にセットする
+        # もし次にとるべきフェーズが次のフェーズと異なるなら、次のフェーズに移る黄色信号フェーズにセットする
         if phases[action] != light_phase:
             traci.trafficlight.setPhase("0", light_phase+1)
 
@@ -187,10 +184,10 @@ def get_options():
     return options
 
 
+# rewardをプロットする
 def plot_graph(rewards):
     plt.figure()
     plt.plot(rewards)
-    #plt.ylim(-50000, 100000)
     plt.show()
 
 # this is the main entry point of this script

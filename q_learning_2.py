@@ -16,22 +16,21 @@ class QLearning:
         self.prev_t = 0
         self.action = 0
         self.state = 0
-
         self.max_length_prev_t = 0
         self.rewards = []
         self.cycle_rewards = 0
 
-
-
     def digitize_state(self, light_phase, ns_occupancy, ew_occupancy, elapsed_time):
 
+        # 経過時間を0-originに変換
+        elapsed_time = elapsed_time - self.min_elapsed_time
+
+        # 各stateをもとにユニークなindexに変換
         digitized = int(light_phase/2)
-        digitized += len(self.phases) * np.digitize(ns_occupancy, bins=bins(0, 0.9, 10))
-        digitized += len(self.phases) * self.num_lane_occupancy_states * np.digitize(ew_occupancy, bins=bins(0, 0.9, 10))
+        digitized += len(self.phases) * np.digitize(ns_occupancy, bins=bins(0, 0.9, self.num_lane_occupancy_states))
+        digitized += len(self.phases) * self.num_lane_occupancy_states * np.digitize(ew_occupancy, bins=bins(0, 0.9, self.num_lane_occupancy_states))
         digitized += len(self.phases) * self.num_lane_occupancy_states**2 * elapsed_time
-
         return digitized
-
 
     def get_action(self, observation):
         # ε-greedy, 1000stepごとにεを減らす
@@ -45,6 +44,7 @@ class QLearning:
         return next_action
 
     def calculate_reward(self, ns_length, ew_lenght):
+        # 前回のフェーズの混雑状況と比較してどれくらい改善したかをrewardにする
         max_length_t = ns_length + ew_lenght
         reward = self.max_length_prev_t**2 - max_length_t**2
         return reward
