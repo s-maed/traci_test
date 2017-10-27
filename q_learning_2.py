@@ -33,7 +33,7 @@ class QLearning:
         return digitized
 
     def get_action(self, observation):
-        # ε-greedy, 1000stepごとにεを減らす
+        # ε-greedy, 20000stepごとにεを減らす
         decrease_param = 1 / (np.ceil(self.prev_t / 20000) + 1)
         epsilon = 0.5 * decrease_param
 

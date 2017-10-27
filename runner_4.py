@@ -33,7 +33,7 @@ def generate_routefile():
     N = 1000000  # number of time steps
     # demand per second from different directions
     pWE = 1. / 12
-    pEW = 1. / 7
+    pEW = 1. / 9
     pNS = 1. / 30
     pSN = 1. / 40
     with open("data/cross.rou.xml", "w") as routes:
@@ -88,7 +88,7 @@ def run():
     phases = [0, 2]                # 信号のフェーズのうち、0と2のどちらかをとる
     num_lane_occupancy_states = 10 # 各レーンの混雑具合のレベル数
     num_lanes = 2                  # レーンの数（南北で一つ、東西で一つ）
-    min_elapsed_time = 10          # 信号の最小点灯時間
+    min_elapsed_time =  5          # 信号の最小点灯時間
     max_elapsed_time = 40          # 信号の最大点灯時間
     actions = [0, 1]               # 取りうるアクションのインデックス
 
