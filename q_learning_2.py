@@ -26,8 +26,8 @@ class QLearning:
     def digitize_state(self, light_phase, ns_occupancy, ew_occupancy, elapsed_time):
 
         digitized = int(light_phase/2)
-        digitized += len(self.phases) * np.digitize(ns_occupancy, bins=bins(0, 70, 10))
-        digitized += len(self.phases) * self.num_lane_occupancy_states * np.digitize(ew_occupancy, bins=bins(0, 70, 10))
+        digitized += len(self.phases) * np.digitize(ns_occupancy, bins=bins(0, 0.9, 10))
+        digitized += len(self.phases) * self.num_lane_occupancy_states * np.digitize(ew_occupancy, bins=bins(0, 0.9, 10))
         digitized += len(self.phases) * self.num_lane_occupancy_states**2 * elapsed_time
 
         return digitized
@@ -45,12 +45,12 @@ class QLearning:
         return next_action
 
     def calculate_reward(self, ns_length, ew_lenght):
-        max_length_t = max(ns_length, ew_lenght)
+        max_length_t = ns_length + ew_lenght
         reward = self.max_length_prev_t**2 - max_length_t**2
         return reward
 
     def update_Qtable(self, state, action, reward, observation):
-        gamma = 0.99
+        gamma = 0.5
         alpha = 0.5
 
         next_max_Q = np.max(self.q_table[observation])

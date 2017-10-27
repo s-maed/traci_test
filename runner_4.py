@@ -47,7 +47,7 @@ def generate_routefile():
     N = 1000000  # number of time steps
     # demand per second from different directions
     pWE = 1. / 15
-    pEW = 1. / 10
+    pEW = 1. / 8
     pNS = 1. / 30
     pSN = 1. / 40
     with open("data/cross.rou.xml", "w") as routes:
@@ -117,7 +117,6 @@ def run():
 
         # 現在の信号のフェーズ
         light_phase = traci.trafficlight.getPhase("0")
-        print("length:", traci.lanearea.getLength("0"))
 
         # もし黄色信号のフェーズだったら次のステップに進む
         if light_phase == 1 or light_phase == 3:
@@ -126,7 +125,7 @@ def run():
                 q.is_set_max_duration = False
                 ns_length = max(traci.lanearea.getJamLengthMeters("0"), traci.lanearea.getJamLengthMeters("2"))
                 ew_length = max(traci.lanearea.getJamLengthMeters("1"), traci.lanearea.getJamLengthMeters("3"))
-                q.max_length_prev_t = max(ns_length, ew_length)
+                q.max_length_prev_t = ns_length + ew_length
 
                 if light_phase == 3:
                     q.rewards.append(q.cycle_rewards)
@@ -139,12 +138,16 @@ def run():
             q.is_set_max_duration = True
 
         # もし青フェーズの最低点灯時間に達していなかったら、次のステップに進む
-        if (step - q.prev_t) < q.min_elapsed_time:
+        if (step - q.prev_t) < (q.min_elapsed_time + 6):
             continue
 
         # observation（現在のstate）
-        ns_occupancy = max(traci.lanearea.getLastStepOccupancy("0"), traci.lanearea.getLastStepOccupancy("2"))
-        ew_occupancy = max(traci.lanearea.getLastStepOccupancy("1"), traci.lanearea.getLastStepOccupancy("3"))
+        lane_length = traci.lanearea.getLength("0")
+        ns_occupancy = max(traci.lanearea.getJamLengthMeters("0")/lane_length, traci.lanearea.getJamLengthMeters("2")/lane_length)
+        ew_occupancy = max(traci.lanearea.getJamLengthMeters("1")/lane_length, traci.lanearea.getJamLengthMeters("3")/lane_length)
+        print(ew_occupancy)
+        print(traci.lanearea.getJamLengthMeters("1"))
+        print(lane_length)
         elapsed_time = min(step - q.prev_t - q.min_elapsed_time, 29)
         observation = q.digitize_state(light_phase, ns_occupancy, ew_occupancy, elapsed_time)
 
@@ -187,7 +190,7 @@ def get_options():
 def plot_graph(rewards):
     plt.figure()
     plt.plot(rewards)
-    plt.ylim(-50000, 100000)
+    #plt.ylim(-50000, 100000)
     plt.show()
 
 # this is the main entry point of this script
