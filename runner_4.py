@@ -32,8 +32,8 @@ def generate_routefile():
     random.seed(42)  # make tests reproducible
     N = 1000000  # number of time steps
     # demand per second from different directions
-    pWE = 1. / 12
-    pEW = 1. / 9
+    pWE = 1. / 10
+    pEW = 1. / 7
     pNS = 1. / 30
     pSN = 1. / 40
     with open("data/cross.rou.xml", "w") as routes:
@@ -92,7 +92,11 @@ def run():
     max_elapsed_time = 40          # 信号の最大点灯時間
     actions = [0, 1]               # 取りうるアクションのインデックス
 
-    q = QLearning(phases, num_lane_occupancy_states, num_lanes, min_elapsed_time, max_elapsed_time, actions)
+    # Q tableを保存してあるcsvファイルを指定
+    # まっさらな状態から始めるときは何も指定しない（"" or None）
+    q_table_model = "data/q_table/q_table_50000.csv"
+
+    q = QLearning(phases, num_lane_occupancy_states, num_lanes, min_elapsed_time, max_elapsed_time, actions, q_table_model)
 
 
     while traci.simulation.getMinExpectedNumber() > 0:
@@ -100,8 +104,10 @@ def run():
 
         # 10000ステップごとにrewardをプロットする
         step += 1
-        if step % 10000 == 0:
+        if step % 50000 == 0:
             plot_graph(q.rewards)
+            # ここまでのQ tableを保存
+            np.savetxt("data/q_table/q_table_{}.csv".format(step), q.q_table, delimiter=",")
 
         # 現在の信号のフェーズ
         light_phase = traci.trafficlight.getPhase("0")

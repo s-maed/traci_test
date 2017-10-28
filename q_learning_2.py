@@ -2,9 +2,14 @@ import numpy as np
 
 
 class QLearning:
-    def __init__(self, phases, num_lane_occupancy_states, num_lanes, min_elapsed_time, max_elapsed_time, actions):
+    def __init__(self, phases, num_lane_occupancy_states, num_lanes, min_elapsed_time, max_elapsed_time, actions, q_table_model=None):
 
-        self.q_table = np.random.uniform(low=0, high=1, size=(len(phases) * num_lane_occupancy_states**num_lanes * (max_elapsed_time - min_elapsed_time), len(actions)))
+        if q_table_model:
+            self.q_table = np.genfromtxt(q_table_model, delimiter=",")
+            print('load Q table model.')
+        else:
+            self.q_table = np.random.uniform(low=0, high=1, size=(len(phases) * num_lane_occupancy_states**num_lanes * (max_elapsed_time - min_elapsed_time), len(actions)))
+
         self.phases = phases
         self.num_lane_occupancy_states = num_lane_occupancy_states
         self.num_lanes = num_lanes
@@ -34,7 +39,7 @@ class QLearning:
 
     def get_action(self, observation):
         # ε-greedy, 20000stepごとにεを減らす
-        decrease_param = 1 / (np.ceil(self.prev_t / 20000) + 1)
+        decrease_param = 1 / (np.ceil(self.prev_t / 200) + 1)
         epsilon = 0.5 * decrease_param
 
         if epsilon <= np.random.uniform(0, 1):
