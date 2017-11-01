@@ -2,3 +2,4 @@ __pycache__/
 tripinfo.xml
 data/cross.out
 data/cross.rou.xml
+data/q_table/
