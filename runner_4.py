@@ -94,7 +94,7 @@ def run():
 
     # Q tableを保存してあるcsvファイルを指定
     # まっさらな状態から始めるときは何も指定しない（"" or None）
-    q_table_model = "data/q_table/q_table_50000.csv"
+    q_table_model = ""
 
     q = QLearning(phases, num_lane_occupancy_states, num_lanes, min_elapsed_time, max_elapsed_time, actions, q_table_model)
 
@@ -110,7 +110,7 @@ def run():
             np.savetxt("data/q_table/q_table_{}.csv".format(step), q.q_table, delimiter=",")
 
         # 現在の信号のフェーズ
-        light_phase = traci.trafficlight.getPhase("0")
+        light_phase = traci.trafficlights.getPhase("0")
 
         # もし黄色信号のフェーズだったら次のステップに進む
         if light_phase == 1 or light_phase == 3:
@@ -135,7 +135,7 @@ def run():
         # もし青フェーズになったばかりだったら、点灯時間の最大値をセットする
         # ミリ秒単位でセットするので、40 * 1000
         if not q.is_set_max_duration:
-            traci.trafficlight.setPhaseDuration("0", q.max_elapsed_time*1000)
+            traci.trafficlights.setPhaseDuration("0", q.max_elapsed_time*1000)
             q.is_set_max_duration = True
 
         # もし青フェーズの最低点灯時間に達していなかったら、そのまま次のステップに進む
@@ -176,7 +176,7 @@ def run():
 
         # もし次にとるべきフェーズが次のフェーズと異なるなら、次のフェーズに移る黄色信号フェーズにセットする
         if phases[action] != light_phase:
-            traci.trafficlight.setPhase("0", light_phase+1)
+            traci.trafficlights.setPhase("0", light_phase+1)
 
     traci.close()
     sys.stdout.flush()
